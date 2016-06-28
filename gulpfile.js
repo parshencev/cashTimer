@@ -22,13 +22,13 @@ gulp.task('less', function () {
     plugins: [autoprefix]
   }))
   .pipe(gulp.dest(path.css));
-}
+});
 
 gulp.task('js', function () {
  return gulp.src(path.js)
   .pipe(uglify())
   .pipe(gulp.dest(path.js_min));
-}
+});
 
 gulp.task('html', function() {
   return gulp.src(path.html)
@@ -48,7 +48,7 @@ gulp.task('watch', function () {
   gulp.watch(path.js, ['js']);
   gulp.watch(path.less, ['less']);
   gulp.watch(path.html, ['html']);
-})
+});
 
 gulp.task('default',['js','less','html','watch'], function() {
   gulp.run(['serve']);
