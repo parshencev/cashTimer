@@ -3,8 +3,8 @@ var cashTimer = {
     startDate: new Date(2015,5,28),
     notWorkingDays: [0, 6],
     startTime: {
-      hours: 7,
-      minutes: 30
+      hours: 0,
+      minutes: 20
     },
     endTime: {
       hours: 18,
@@ -13,9 +13,11 @@ var cashTimer = {
     monthCash: "30000"
   },
   timing: {
-    cash: 0,
+    cashBeforeToday: 0,
     cashInDay: 0,
-    today: new Date()
+    cashToday: 0,
+    cash: 0,
+    today: function () { return new Date(); }
   }
 };
 
@@ -64,7 +66,7 @@ function countCash (monthsArray, notWorkingDays, monthCash, today) {
 
   cashTimer.timing.cashInDay = monthCash / workingDaysInMonth;
   cash += workingDaysInMonthBeforeToday * cashTimer.timing.cashInDay;
-
+  cashTimer.timing.lastRecalculationDay = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
   return cash;
 }
 
@@ -86,20 +88,10 @@ function countWorkingDaysInMonth (startDate, endDate, notWorkingDays) {
   return endDate.getDate() - startDate.getDate() - countNotWorkingDays;
 }
 
-function serchInArray (value, array) {
-  for (var i = 0; i < array.length; i++) {
-    if (value == array[i]) {
-      return true;
-    }
-
-    return false;
-  }
-}
-
-function countTodayCash(today, startTime, endTime, monthCash) {
+function countTodayCash(today, startTime, endTime) {
 
   var cash = 0,
-      todaySeconds = ((today.getHours() * 60) + today.getMinutes()) * 60,
+      todaySeconds = ((today.getHours() * 60) + today.getMinutes()) * 60 + today.getSeconds(),
       startTimeSeconds = ((startTime.hours * 60) + startTime.minutes) * 60,
       endTimeSeconds = ((endTime.hours * 60) + endTime.minutes) * 60,
       allDaySeconds = 24 * 60 * 60,
@@ -108,11 +100,31 @@ function countTodayCash(today, startTime, endTime, monthCash) {
   if (todaySeconds >= startTimeSeconds && todaySeconds <= endTimeSeconds) {
     cash = (todaySeconds - startTimeSeconds) * cashInSecond;
   }
+  else {
+    cash = cashTimer.timing.cashInDay;
+  }
 
   return cash;
 }
 
+function startCashTimer () {
+  setInterval(function(){
+    var cash = cashTimer.timing.cashToday;
+
+    if (cashTimer.timing.today().getFullYear() != cashTimer.timing.lastRecalculationDay.getFullYear() && cashTimer.timing.today().getMonth() != cashTimer.timing.lastRecalculationDay.getMonth() && cashTimer.timing.today().getDate() != cashTimer.timing.lastRecalculationDay.getDate()) {
+      cashTimer.timing.cashBeforeToday=countCash(getAllDates(cashTimer.settings.startDate, cashTimer.timing.today()).months, cashTimer.settings.notWorkingDays, cashTimer.settings.monthCash, cashTimer.timing.today());
+    }
+
+    cashTimer.timing.cashToday = countTodayCash(cashTimer.timing.today(), cashTimer.settings.startTime, cashTimer.settings.endTime);
+
+    if (cashTimer.timing.cashToday != cash) {
+      cashTimer.timing.cash = cashTimer.timing.cashBeforeToday + cashTimer.timing.cashToday;
+    }
+    console.log(cashTimer.timing.cash);
+  },1000);
+}
+
 window.addEventListener("DOMContentLoaded", function(){
-  cashTimer.timing.cash=countCash(getAllDates(cashTimer.settings.startDate, cashTimer.timing.today).months, cashTimer.settings.notWorkingDays, cashTimer.settings.monthCash, cashTimer.timing.today);
-  cashTimer.timing.cash+=countTodayCash(cashTimer.timing.today, cashTimer.settings.startTime, cashTimer.settings.endTime);
+  cashTimer.timing.cashBeforeToday=countCash(getAllDates(cashTimer.settings.startDate, cashTimer.timing.today()).months, cashTimer.settings.notWorkingDays, cashTimer.settings.monthCash, cashTimer.timing.today());
+  startCashTimer();
 });
