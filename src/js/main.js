@@ -1,133 +1,51 @@
 var cashTimer = {
   settings: {
-    startDate: new Date(2015,5,28),
-    notWorkingDays: [0, 6],
-    startTime: {
-      hours: 0,
-      minutes: 20
-    },
-    endTime: {
-      hours: 18,
-      minutes: 25
-    },
-    monthCash: "30000"
+    monthCash: "30000",
+    dom: function() { return document.getElementById("cashTimer"); }
   },
   timing: {
     cashBeforeToday: 0,
     cashInDay: 0,
     cashToday: 0,
     cash: 0,
+    oldDay: "",
     today: function () { return new Date(); }
   },
   functions: {
-    getAllDates: function (startDate, endDate) {
-      var years  = endDate.getFullYear() - startDate.getFullYear(),
-      months = 0,
-      days   = 0,
-      year   = startDate.getFullYear(),
-      month  = startDate.getMonth(),
-      day    = startDate.getDate(),
-      dateArray = [],
-      monthsArray = [];
-
-      for (var y = startDate.getFullYear(); y <= endDate.getFullYear(); y++) {
-
-        if (y == startDate.getFullYear()) {
-          months = startDate.getMonth();
-        }
-        else if (y == endDate.getFullYear()) {
-          months = endDate.getMonth();
-        }
-        else {
-          months = 11;
-        }
-
-        for (var m = 0; m <= months; m++) {
-          days = new Date(y,m,0).getDate();
-          monthsArray.push(m);
-
-          for (var d = 1; d <= days; d++) {
-            dateArray.push(new Date(y,m,d));
-          }
-        }
-
-      }
-
-      return Object({dates: dateArray, months: monthsArray});
+    getCashInDay: function (monthCash, monthLastDate) {
+      cashTimer.timing.cashInDay = monthCash / monthLastDate;
     },
-    countCash: function (monthsArray, notWorkingDays, monthCash, today) {
-      var todays = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(),
-      todayMonthNotWorkingDays = 0,
-      cash = (monthsArray.length - 1) * monthCash,
-      workingDaysInMonth = cashTimer.functions.countWorkingDaysInMonth(new Date(today.getFullYear(), today.getMonth() + 1, 1), new Date(today.getFullYear(), today.getMonth() + 1, 0), notWorkingDays),
-      workingDaysInMonthBeforeToday = cashTimer.functions.countWorkingDaysInMonth(new Date(today.getFullYear(), today.getMonth() + 1, 1), new Date(today.getFullYear(), today.getMonth() + 1, today.getDate() - 1), notWorkingDays);
+    getTodayCash: function (cashBeforeToday, cashInDay, today) {
+      var mill = (today.getHours()*60*60*1000) + (today.getMinutes()*60*1000) + (today.getSeconds()*1000) + today.getMilliseconds(),
+          cash = (cashInDay / 86400000) * mill;
 
-      cashTimer.timing.cashInDay = monthCash / workingDaysInMonth;
-      cash += workingDaysInMonthBeforeToday * cashTimer.timing.cashInDay;
-      cashTimer.timing.lastRecalculationDay = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
-      return cash;
+      cashTimer.timing.cashToday = cash;
     },
-    countWorkingDaysInMonth: function (startDate, endDate, notWorkingDays) {
-      var countNotWorkingDays = 0;
-
-      for (var d = startDate.getDate(); d <= endDate.getDate(); d++) {
-        var date = new Date(startDate.getFullYear(), startDate.getMonth() + 1, d);
-
-        notWorkingDays.map(function(day){
-          if (day == date.getDay()) {
-            countNotWorkingDays++;
-          }
-        });
-      }
-      if (startDate.getDate() == 1) {
-        return endDate.getDate() - countNotWorkingDays;
-      }
-      return endDate.getDate() - startDate.getDate() - countNotWorkingDays;
+    setOldDay: function () {
+      cashTimer.timing.oldDay = cashTimer.timing.today();
     },
-    countTodayCash: function (today, startTime, endTime) {
-      var cash = 0,
-      todaySeconds = ((today.getHours() * 60) + today.getMinutes()) * 60 + today.getSeconds(),
-      startTimeSeconds = ((startTime.hours * 60) + startTime.minutes) * 60,
-      endTimeSeconds = ((endTime.hours * 60) + endTime.minutes) * 60,
-      allDaySeconds = 24 * 60 * 60,
-      cashInSecond = cashTimer.timing.cashInDay / (endTimeSeconds - startTimeSeconds);
+    getLastDate: function (date) {
+      var dateMonth = date.getMonth() + 1,
+          dateYear = date.getYear(),
+          newDate = new Date(dateYear, dateMonth, 0);
 
-      if (todaySeconds >= startTimeSeconds && todaySeconds <= endTimeSeconds) {
-        cash = (todaySeconds - startTimeSeconds) * cashInSecond;
-      }
-      else {
-        cash = cashTimer.timing.cashInDay;
-      }
-
-      return cash;
-    },
-    getCashBeforeToday: function () {
-      cashTimer.timing.cashBeforeToday=cashTimer.functions.countCash(cashTimer.functions.getAllDates(cashTimer.settings.startDate, cashTimer.timing.today()).months, cashTimer.settings.notWorkingDays, cashTimer.settings.monthCash, cashTimer.timing.today());
+      return newDate.getDate();
     },
     startCashTimer: function () {
+      cashTimer.functions.getCashInDay(cashTimer.settings.monthCash, cashTimer.functions.getLastDate(cashTimer.timing.today()));
+      cashTimer.functions.setOldDay();
       setInterval(function(){
-        var cash = cashTimer.timing.cashToday;
-
-        if (cashTimer.timing.today().getFullYear() != cashTimer.timing.lastRecalculationDay.getFullYear() && cashTimer.timing.today().getMonth() != cashTimer.timing.lastRecalculationDay.getMonth() && cashTimer.timing.today().getDate() != cashTimer.timing.lastRecalculationDay.getDate()) {
-          cashTimer.timing.cashBeforeToday=cashTimer.functions.countCash(cashTimer.functions.getAllDates(cashTimer.settings.startDate, cashTimer.timing.today()).months, cashTimer.settings.notWorkingDays, cashTimer.settings.monthCash, cashTimer.timing.today());
+        if (cashTimer.timing.today().getMonth() != cashTimer.timing.oldDay.getMonth()) {
+          cashTimer.functions.setOldDay();
+          cashTimer.functions.getCashInDay(cashTimer.settings.monthCash, cashTimer.functions.getLastDate(cashTimer.timing.today()));
         }
 
-        cashTimer.timing.cashToday = cashTimer.functions.countTodayCash(cashTimer.timing.today(), cashTimer.settings.startTime, cashTimer.settings.endTime);
-
-        if (cashTimer.timing.cashToday != cash) {
-          cashTimer.timing.cash = cashTimer.timing.cashBeforeToday + cashTimer.timing.cashToday;
-        }
-
-        document.querySelector("#AllCash .cashView").innerHTML = cashTimer.timing.cash.toFixed(2);
-      },1000);
-    },
-    firstStartCashTimer: function () {
-      cashTimer.functions.getCashBeforeToday();
-      cashTimer.functions.startCashTimer();
+        cashTimer.functions.getTodayCash(cashTimer.timing.cashBeforeToday, cashTimer.timing.cashInDay, cashTimer.timing.today());
+        cashTimer.timing.cash = cashTimer.timing.cashBeforeToday + cashTimer.timing.cashToday;
+        
+        cashTimer.settings.dom().innerHTML = cashTimer.timing.cash;
+      },1);
     }
   }
 };
 
-window.addEventListener("DOMContentLoaded", function(){
-  cashTimer.functions.firstStartCashTimer();
-});
