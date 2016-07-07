@@ -43,7 +43,7 @@ var cashTimer = {
         cashTimer.functions.getTodayCash(cashTimer.timing.cashBeforeToday, cashTimer.timing.cashInDay, cashTimer.timing.today());
         cashTimer.timing.cash = cashTimer.timing.cashBeforeToday + cashTimer.timing.cashToday;
         
-        cashTimer.settings.dom().innerHTML = cashTimer.timing.cash;
+        cashTimer.settings.dom().innerHTML = cashTimer.timing.cash.toFixed(2);
       },1);
     }
   }
